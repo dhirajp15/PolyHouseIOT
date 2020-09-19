@@ -96,53 +96,25 @@ void loop() {
   if (runEvery(5000)) {
      switch (mode_of_operation){
       case INITIALIZE_MODE:
-      //check if gateway id and config received 
-      initialization_begin();
+        //check if gateway id and config received 
+        initialization_begin();
       break;
       case BROADCAST_MODE:
-      broadcast_begin();
+        broadcast_begin();
+      break;
+      case ACTIVE_MODE:
+        active_mode_begin();
       break;
       case SENSOR_MODE:
+        sensor_mode_begin();
       break;
       case ACTUATOR_MODE:
+        actuator_mode_begin();
       break;
       default:
       break;
      }
   }
-  /*
-  if (runEvery(10000)) { // repeat every 10000 millis
-    String message = "";
-     // Get temperature event and send its value to LoRa Gateway
-    sensors_event_t event;
-    dht.temperature().getEvent(&event);
-    if (isnan(event.temperature)) {
-    Serial.println(F("Error reading temperature!"));
-    }
-    else {
-    Serial.print(F("Temperature: "));
-    Serial.print(event.temperature);
-    Serial.println(F("°C"));
-    }
-    message += "Temperature: "+String(event.temperature)+" deg C ";
-    // Get humidity event and print its value.
-    dht.humidity().getEvent(&event);
-    if (isnan(event.relative_humidity)) {
-      Serial.println(F("Error reading humidity!"));
-     }
-    else {
-      Serial.print(F("Humidity: "));
-      Serial.print(event.relative_humidity);
-      Serial.println(F("%"));
-    }
-    message += "  Humidity: "+String(event.relative_humidity)+" % \n";
-    message += millis();
-    
-    LoRa_sendMessage(message); // send a message
-
-    Serial.println("Send Message!");
-  }
-  */
 }
 
 void LoRa_rxMode(){
@@ -166,15 +138,11 @@ void onReceive(int packetSize) {
   memset(rx_buf,0,RX_BUF_LEN);
   int i = 0;
     while (LoRa.available()) {
-      if(i == 2){
-        uint8_t start_byte = strtol(rx_buf, NULL, 16);
-        Serial.print("start_byte: ");
-        Serial.println(start_byte);
-        if(start_byte != START_BYTE){
-          Serial.print("Invalid Start Byte");
-          break;
+      //Check if start byte is present
+      if( (i == 2) && (!is_start_byte_present(rx_buf)) ) {
+        Serial.print("Invalid Start Byte");
+        break;
         }
-      }
       rx_buf[i] = (char)LoRa.read();
       i++;
     }
@@ -210,4 +178,40 @@ void print_hex(char* data, int len){
   if((i+1)%8 == 0)
     Serial.println("");
   }
+}
+
+String get_sensor_data(SENSOR_TYPE sensor){
+  String sensor_data = "";
+  switch(sensor){
+      case TEMP_HUMIDITY:
+         // Get temperature event and send its value to LoRa Gateway
+        sensors_event_t event;
+        dht.temperature().getEvent(&event);
+        if (isnan(event.temperature)) {
+          Serial.println(F("Error reading temperature!"));
+          sensor_data = "Error reading temperature";
+          break;
+        }
+        else {
+        Serial.print(F("Temperature: "));
+        Serial.print(event.temperature);
+        Serial.println(F("°C"));
+        }
+        sensor_data += String(event.temperature)+" deg C ,";
+        // Get humidity event and print its value.
+        dht.humidity().getEvent(&event);
+        if (isnan(event.relative_humidity)) {
+          Serial.println(F("Error reading humidity!"));
+          sensor_data = "Error reading humidity";
+          break;
+         }
+        else {
+          Serial.print(F("Humidity: "));
+          Serial.print(event.relative_humidity);
+          Serial.println(F("%"));
+        }
+        sensor_data += String(event.relative_humidity)+" %";
+      break;
+  }
+  return(sensor_data);
 }

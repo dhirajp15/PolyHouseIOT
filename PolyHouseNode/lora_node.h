@@ -32,14 +32,11 @@
 #define DHTTYPE DHT11
 
 //enums
-enum NODE_ROLE{
-  SENSOR_NODE,
-  ACTUATOR_NODE
-};
 
 enum MODE{
   INITIALIZE_MODE,
   BROADCAST_MODE,
+  ACTIVE_MODE,
   SENSOR_MODE,
   ACTUATOR_MODE
 };
@@ -55,7 +52,9 @@ void initialization_begin();
 void broadcast_begin();
 void sensor_mode_begin();
 void actuator_mode_begin();
+void active_mode_begin();
 void update_node_state(lora_message msg);
+String get_sensor_data(SENSOR_TYPE sensor);
 
 
 

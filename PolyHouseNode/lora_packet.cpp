@@ -39,7 +39,7 @@ lora_message parse_received_message(String received_message_str, int msg_len){
   lora_message received_msg;
   received_msg.start_byte = strtol(received_message_str.substring(0, 2).c_str(), NULL, 16);
   Serial.print("start_byte:");
-  Serial.println(received_msg.start_byte);
+  Serial.println(received_msg.start_byte,HEX);
   received_msg.id = received_message_str.substring(2, 6);
   Serial.print("GateWay Id:");
   Serial.println(received_msg.id);
@@ -59,7 +59,7 @@ lora_message parse_received_message(String received_message_str, int msg_len){
   Serial.println(received_msg.mdata);
   received_msg.end_byte = strtol(received_message_str.substring(14+received_msg.data_length,received_msg.data_length+16).c_str(), NULL, 16);
   Serial.print("End Byte:");
-  Serial.println(received_msg.end_byte);
+  Serial.println(received_msg.end_byte,HEX);
   return(received_msg);
 }
 
@@ -74,4 +74,14 @@ String convert_hex_to_string(char* hex_cstr ,int len){
     hex_str+= temp[1];
   }
   return(hex_str);
+}
+
+bool is_start_byte_present(char* rx_buf){
+  uint8_t start_byte = strtol(rx_buf, NULL, 16);
+  Serial.print("start_byte: ");
+  Serial.println(start_byte,HEX);
+  if(start_byte != START_BYTE){
+    return false;
+  }
+  return true;
 }

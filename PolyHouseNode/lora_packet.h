@@ -24,7 +24,10 @@
 typedef enum OP_CODE{
   GATEWAY_INIT,
   NODE_INIT,
+  INIT_SUCCESS,
   COMMAND,
+  COMMAND_EXEC,
+  SENSOR_DATA_REQ,
   SENSOR_DATA,
   ACK
 }OP_CODE;
@@ -52,5 +55,6 @@ typedef struct lora_message{
 String generate_message(const char* id, OP_CODE op_code, DATA_HEADER data_header, char* data);
 lora_message parse_received_message(String received_message, int msg_len);
 String convert_hex_to_string(char* hex_cstr ,int len);
+bool is_start_byte_present(char* rx_buf);
 
 #endif  //_LORA_PACKET_
