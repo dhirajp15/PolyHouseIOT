@@ -30,6 +30,10 @@
 
 #define GATEWAY_ID "2000"
 #define INIT_DATA "Interval,30min,RTCtime,1600005124"
+#define INIT_SUCCESS_MSG "SUCCESS"
+#define SENSOR_REQ_MSG "SENSOR_COUNT: 2,SENSOR TYPE: TEMP_HUMMIDITY"
+#define ACK_MSG   "GATEWAY_RECEIVED_ACK"
+
 
 
 const long frequency = 433E6;  // LoRa Frequency
@@ -38,8 +42,12 @@ const int csPin = 5;          // LoRa radio chip select
 const int resetPin = 14;        // LoRa radio reset
 const int irqPin = 2;          // change for your board; must be a hardware interrupt pin
 
-bool is_messages_received = false;
+bool is_node_id_received = false;
+bool is_sensor_data_received = false;
 void print_hex(char* data, int len);
+
+char rx_buf[256]; 
+String msg_str = "";
 
 void setup() {
   Serial.begin(9600);                   // initialize serial
@@ -66,13 +74,46 @@ void setup() {
 }
 
 void loop() {
-  if (runEvery(10000)) { // repeat every 5000 millis
-    //if(is_messages_received == true){
-    String msg_str = generate_message(GATEWAY_ID,GATEWAY_INIT,NO_HEADER,INIT_DATA);
-    Serial.println(msg_str);
-    LoRa_sendMessage(msg_str); // send a message
-    Serial.println("Sending Id");
-    //}
+  if (Serial.available()) {      // If anything comes in Serial (USB),
+    char op = Serial.read();   // read it and send it out Serial1 (pins 0 & 1)
+    switch (op){
+      //Initialize 
+      case '1':
+          msg_str = generate_message(GATEWAY_ID,GATEWAY_INIT,NO_HEADER,INIT_DATA);
+          Serial.println(msg_str);
+          LoRa_sendMessage(msg_str); // send a message
+          Serial.println("Sending Id");
+          //Wait for getting Node Packet
+          while(is_node_id_received == false){
+            Serial.println("Waiting for Node Id...");
+            delay(2000);
+          }
+          is_node_id_received = false;
+          //Send Init successfuul packet
+          msg_str = generate_message(GATEWAY_ID,INIT_SUCCESS,NO_HEADER,INIT_SUCCESS_MSG);
+          Serial.println(msg_str);
+          LoRa_sendMessage(msg_str); // send a message
+       break;
+       //Query Sensor Value
+       case '2':
+          msg_str = generate_message(GATEWAY_ID,SENSOR_DATA_REQ,NO_HEADER,SENSOR_REQ_MSG);
+          Serial.println(msg_str);
+          LoRa_sendMessage(msg_str); // send a message
+          Serial.println("Sending Sensor Request");
+          //Wait for getting Sensor Data
+          while(is_sensor_data_received == false){
+            Serial.println("Waiting for Sensor Data...");
+            delay(2000);
+          }
+          is_sensor_data_received = false;
+          //Send ack
+          msg_str = generate_message(GATEWAY_ID,ACK,NO_HEADER,ACK_MSG);
+          Serial.println(msg_str);
+          LoRa_sendMessage(msg_str); // send a message
+       break;
+     default:
+     break;
+    }
   }
 }
 
@@ -94,16 +135,42 @@ void LoRa_sendMessage(String message) {
 }
 
 void onReceive(int packetSize) {
-  String message = "";
-
+  memset(rx_buf,0,256);
+  int i = 0;
   while (LoRa.available()) {
-    message += (char)LoRa.read();
+    //Check if start byte is present
+    if( (i == 2) && (!is_start_byte_present(rx_buf)) ) {
+      Serial.print("Invalid Start Byte");
+      break;
+      }
+    rx_buf[i] = (char)LoRa.read();
+    i++;
   }
-  is_messages_received = true;
   Serial.print("Gateway Receive: ");
-  Serial.print("' with RSSI ");
+  Serial.print(" with RSSI ");
   Serial.println(LoRa.packetRssi());
-  Serial.println(message);
+  Serial.println(rx_buf);
+  lora_message msg = parse_received_message(rx_buf,i);
+  if(msg.op_code == NODE_INIT){
+    Serial.print("Node ID Receive: ");
+    Serial.println(msg.id);
+    Serial.print("Node Message: ");
+    Serial.println(msg.mdata);
+    is_node_id_received = true;
+  }
+  else if(msg.op_code == SENSOR_DATA){
+    Serial.print("Node ID Receive: ");
+    Serial.println(msg.id);
+    Serial.print("Sensor Data Header: ");
+    Serial.println(msg.data_header);
+    Serial.print("Sensor Data: ");
+    Serial.println(msg.mdata);
+    is_sensor_data_received = true;
+  }
+  else{
+    Serial.print("Unknown Op code: ");
+    Serial.println(msg.op_code);
+  }
 }
 
 void onTxDone() {
