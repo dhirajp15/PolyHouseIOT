@@ -55,6 +55,7 @@ void actuator_mode_begin();
 void active_mode_begin();
 void update_node_state(lora_message msg);
 String get_sensor_data(SENSOR_TYPE sensor);
+void switch_on_led(String mesg);
 
 
 

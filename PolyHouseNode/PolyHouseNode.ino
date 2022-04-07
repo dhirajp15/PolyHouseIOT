@@ -51,7 +51,7 @@ void LoRa_sendMessage(String message);
 DHT_Unified dht(DHTPIN, DHTTYPE);
 
 void setup() {
-  Serial.begin(9600);                   // initialize serial
+  Serial.begin(115200);                   // initialize serial
   while (!Serial);
 
   LoRa.setPins(CS_PIN, RESET_PIN, IRQ_PIN);
@@ -214,4 +214,13 @@ String get_sensor_data(SENSOR_TYPE sensor){
       break;
   }
   return(sensor_data);
+}
+
+void switch_on_led(String mesg){
+  const int ledPin =  LED_BUILTIN;// the number of the LED pin
+  int ledState = LOW;             // ledState used to set the LED
+  pinMode(ledPin, OUTPUT);
+  if(mesg == '1'){
+    ledState= HIGH;
+  }
 }
