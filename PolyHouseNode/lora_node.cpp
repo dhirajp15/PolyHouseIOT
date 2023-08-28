@@ -30,7 +30,7 @@ MODE mode_of_operation = INITIALIZE_MODE;
 SENSOR_TYPE type_of_node = TEMP_HUMIDITY;
 
 #define number_of_sensors 1
-#define number_of_actuators 0
+#define number_of_actuators 1
 
 #define GATEWAY_ID "2000"
 
@@ -66,7 +66,10 @@ void sensor_mode_begin(){
 }
 
 void actuator_mode_begin(){
-  
+  Serial.println("Getting command");
+  String command_ack = generate_message(NODE_ID,ACK,NO_HEADER,"led started");
+  Serial.println(command_ack);
+  LoRa_sendMessage(command_ack);
 }
 
 void update_node_state(lora_message msg){
@@ -93,6 +96,13 @@ void update_node_state(lora_message msg){
             Serial.println("Received Acknowledgement");
             Serial.println(msg.mdata);
              mode_of_operation = ACTIVE_MODE;
+           break;
+           case COMMAND:
+            Serial.println("Received command");
+            Serial.println(msg.mdata);
+            switch_on_led(msg.mdata);
+            mode_of_operation = ACTUATOR_MODE;
+           break;    
           default:
            Serial.println("Opcode Mismatch");
           break;

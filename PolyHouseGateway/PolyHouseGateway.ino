@@ -33,6 +33,7 @@
 #define INIT_SUCCESS_MSG "SUCCESS"
 #define SENSOR_REQ_MSG "SENSOR_COUNT: 2,SENSOR TYPE: TEMP_HUMMIDITY"
 #define ACK_MSG   "GATEWAY_RECEIVED_ACK"
+#define COM_PCK   "1"
 
 
 
@@ -44,13 +45,15 @@ const int irqPin = 2;          // change for your board; must be a hardware inte
 
 bool is_node_id_received = false;
 bool is_sensor_data_received = false;
+bool is_command_acknowledged = false;
 void print_hex(char* data, int len);
 
 char rx_buf[256]; 
 String msg_str = "";
 
 void setup() {
-  Serial.begin(9600);                   // initialize serial
+  Serial.begin(115200);                   // initialize serial
+  Serial.println("Begin done.");
   while (!Serial);
 
   LoRa.setPins(csPin, resetPin, irqPin);
@@ -111,6 +114,23 @@ void loop() {
           Serial.println(msg_str);
           LoRa_sendMessage(msg_str); // send a message
        break;
+       //Send command packet to actuator node
+       case '3':
+          msg_str = generate_message(GATEWAY_ID,COMMAND,NO_HEADER,COM_PCK);
+          Serial.println(msg_str);
+          LoRa_sendMessage(msg_str); // send a message
+          Serial.println("Sending Command");
+          //Wait for Acknowledgement
+          while(is_command_acknowledged == false){
+            Serial.println("Waiting for Command Acknowledgement...");
+            delay(2000);
+          }
+          is_command_acknowledged = false;
+          //Send ack
+          msg_str = generate_message(GATEWAY_ID,ACK,NO_HEADER,ACK_MSG);
+          Serial.println(msg_str);
+          LoRa_sendMessage(msg_str); // send a message
+       break;
      default:
      break;
     }
@@ -166,6 +186,13 @@ void onReceive(int packetSize) {
     Serial.print("Sensor Data: ");
     Serial.println(msg.mdata);
     is_sensor_data_received = true;
+  }
+  else if(msg.op_code == ACK){
+    Serial.print("Node ID Receive: ");
+    Serial.println(msg.id);
+    Serial.print("Command Acknowledged: ");
+    Serial.println(msg.mdata);
+    is_command_acknowledged = true;
   }
   else{
     Serial.print("Unknown Op code: ");
